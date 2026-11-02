@@ -28,6 +28,7 @@ export function VisualizerControls({ audio, settings, updateSettings, fullscreen
         <h3>Make it your own</h3>
         <p>Local performance studio</p>
       </div>
+      <p className="control-guidance">Choose a theme for your colors. Raise sensitivity for quieter sounds; lower it for noisy rooms. Fullscreen expands the stage. Stop releases your microphone.</p>
       <fieldset className="controls" aria-describedby="audio-privacy">
         <legend className="sr-only">Microphone and visualizer controls</legend>
         <div className="control-item microphone-control">
@@ -41,15 +42,16 @@ export function VisualizerControls({ audio, settings, updateSettings, fullscreen
         <div className="control-item sensitivity-control">
           <div className="sensitivity-heading">
             <label className="control-label" htmlFor="sensitivity"><Icon name="sliders" /> Sensitivity</label>
-            <output htmlFor="sensitivity">{settings.sensitivity.toFixed(2)}x</output>
+            <output htmlFor="sensitivity" aria-live="off">{settings.sensitivity.toFixed(2)}x</output>
           </div>
           <div className="range-wrap">
             <span aria-hidden="true">−</span>
-            <input id="sensitivity" type="range" min={SENSITIVITY.minimum} max={SENSITIVITY.maximum}
+            <input id="sensitivity" type="range" aria-describedby="sensitivity-help" min={SENSITIVITY.minimum} max={SENSITIVITY.maximum}
               step={SENSITIVITY.step} value={settings.sensitivity} aria-valuetext={`${settings.sensitivity.toFixed(2)} times`}
               onChange={event => updateSettings({ ...settings, sensitivity: event.currentTarget.valueAsNumber })} />
             <span aria-hidden="true">+</span>
           </div>
+          <span id="sensitivity-help" className="sr-only">Adjusts visual response only. It does not change microphone volume or the audio meters.</span>
           <button className="reset-sensitivity" type="button" onClick={() => updateSettings({ ...settings, sensitivity: 1 })}
             disabled={settings.sensitivity === 1}>Reset to 1.00x</button>
         </div>

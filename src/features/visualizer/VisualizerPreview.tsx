@@ -79,7 +79,7 @@ export function VisualizerPreview({ audio }: { audio: MicrophoneAudio }) {
         fullscreenButtonRef={fullscreenButtonRef} storageUnavailable={storageUnavailable} recording={recording} />
       <RecordingPanel recording={recording} listening={audio.state.status === 'listening'} />
       <AudioLevelMeter audio={audio} />
-      <div className="preview-footnote"><span className="status-dot" /><p>Powered by your sound. Frequency-driven effects, not sound classification.</p></div>
+      <div className="preview-footnote"><span className="status-dot" /><p>Volume lights the core. Low sounds drive waves, mids create bursts, and highs spark. Colors follow your theme. Frequency-driven effects, not sound classification.</p></div>
     </section>
   )
 }

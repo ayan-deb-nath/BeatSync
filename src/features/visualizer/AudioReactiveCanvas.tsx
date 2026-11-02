@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { AudioMeasurements } from '../audio/types'
 import { zeroMeasurements } from '../audio/types'
@@ -7,6 +7,7 @@ import { CanvasRenderer } from './engine/CanvasRenderer'
 import { VisualizerSimulation } from './engine/VisualizerSimulation'
 import { DEFAULT_SETTINGS } from './settings/preferences'
 import type { VisualizerSettings } from './settings/preferences'
+import { getCanvasContext } from './canvasContext'
 
 interface Props {
   measurementsRef: RefObject<AudioMeasurements>
@@ -24,6 +25,12 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
   const [unavailable, setUnavailable] = useState(false)
   const settingsRef = useRef(settings)
   const redrawRef = useRef<(() => void) | null>(null)
+  const attachCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
+    // React invokes callback refs during commit; this is the shared capture ref assignment.
+    // eslint-disable-next-line react-hooks/immutability
+    canvasRef.current = canvas
+    if (canvas) setUnavailable(getCanvasContext(canvas) === null)
+  }, [canvasRef])
 
   useEffect(() => {
     settingsRef.current = settings
@@ -38,8 +45,8 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const context = canvas.getContext('2d')
-    if (!context) { setUnavailable(true); return }
+    const context = getCanvasContext(canvas)
+    if (!context) return
     const renderer = new CanvasRenderer(context)
     const simulation = new VisualizerSimulation()
     simulationRef.current = simulation
@@ -51,6 +58,7 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
     let disposed = false
 
     const redraw = () => {
+      if (disposed) return
       renderer.setTheme(settingsRef.current.theme)
       renderer.draw(simulation, motion.matches)
     }
@@ -59,6 +67,7 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
     if (captureRedrawRef) captureRedrawRef.current = () => { if (motion.matches) redraw() }
 
     const resize = () => {
+      if (disposed) return
       const rect = canvas.getBoundingClientRect()
       const dpr = Math.min(window.devicePixelRatio || 1, VISUALIZER_CONFIG.maxDpr)
       if (rect.width === width && rect.height === height && dpr === pixelRatio) return
@@ -87,6 +96,7 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
       frame = requestAnimationFrame(tick)
     }
     const refresh = () => {
+      if (disposed) return
       if (frame !== null) cancelAnimationFrame(frame)
       frame = null
       previous = 0
@@ -96,11 +106,18 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
       redraw()
       if (!document.hidden && !motion.matches) frame = requestAnimationFrame(tick)
     }
+    const contextLost = () => {
+      disposed = true
+      if (frame !== null) cancelAnimationFrame(frame)
+      if (captureRedrawRef) captureRedrawRef.current = null
+      setUnavailable(true)
+    }
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
     window.addEventListener('resize', resize)
     document.addEventListener('visibilitychange', refresh)
     motion.addEventListener('change', refresh)
+    canvas.addEventListener('contextlost', contextLost)
     refresh()
 
     return () => {
@@ -110,6 +127,7 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
       window.removeEventListener('resize', resize)
       document.removeEventListener('visibilitychange', refresh)
       motion.removeEventListener('change', refresh)
+      canvas.removeEventListener('contextlost', contextLost)
       simulation.clear()
       simulationRef.current = null
       redrawRef.current = null
@@ -119,10 +137,10 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
 
   return (
     <div className="orbit-scene canvas-scene">
-      <canvas ref={canvasRef} className="reactive-canvas" role="img" aria-label="Neon rings with an audio-reactive core, low-frequency shockwaves, mid-frequency particle bursts, and high-frequency sparks. Calm when inactive; static with reduced motion.">
+      <canvas ref={attachCanvas} className="reactive-canvas" role="img" aria-label="Neon rings with an audio-reactive core, low-frequency shockwaves, mid-frequency particle bursts, and high-frequency sparks. Calm when inactive; static with reduced motion.">
         Neon audio visualizer. Live measurements are also available in the audio meters below.
       </canvas>
-      {unavailable && <p className="canvas-fallback">Canvas is unavailable in this browser. Microphone controls and live audio meters are still available.</p>}
+      {unavailable && <p className="canvas-fallback" role="status">Canvas is unavailable. Microphone controls and live audio meters are still available. Try reloading the page or another browser to restore visuals.</p>}
     </div>
   )
 }

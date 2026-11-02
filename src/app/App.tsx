@@ -36,7 +36,7 @@ export function App() {
             </button>
             <span id="hero-audio-note" className="coming-soon">{audio.state.status === 'listening' ? 'Your sound is lighting up the stage below' : 'Live audio · Neon rings · Your rhythm'}</span>
           </div>
-          <p className="privacy-note"><Icon name="shield" /> You choose when to listen. Audio stays in your browser.</p>
+          <p className="privacy-note"><Icon name="shield" /> Allow your microphone to animate the stage. Audio stays in your browser.</p>
         </section>
         <div className="page-width"><VisualizerPreview audio={audio} /></div>
         <section id="how-it-works" className="experience page-width" aria-labelledby="experience-heading">

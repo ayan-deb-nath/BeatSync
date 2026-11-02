@@ -3,6 +3,8 @@ import type { RefObject } from 'react'
 import { FullscreenController } from './FullscreenController'
 
 export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
+  // Construction stores this getter without calling it; connect/toggle read it after commit.
+  // eslint-disable-next-line react-hooks/refs
   const [controller] = useState(() => new FullscreenController(() => targetRef.current, document))
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   useEffect(() => controller.connect(), [controller])

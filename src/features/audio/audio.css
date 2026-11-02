@@ -66,7 +66,7 @@
 }
 
 .audio-levels-heading p {
-  font-size: 10px;
+  font-size: 11px;
   color: #aaa1bc;
 }
 
@@ -80,7 +80,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   color: #d0cbe1;
   margin-bottom: 10px;
 }
@@ -126,7 +126,7 @@
 .audio-meter-band {
   display: block;
   color: #a49bb7;
-  font-size: 9px;
+  font-size: 11px;
   margin-top: 9px;
 }
 
@@ -138,7 +138,7 @@
   .audio-levels { padding: 22px 16px; }
   .audio-meter-grid { gap: 22px 18px; }
   .audio-meter-label { flex-wrap: wrap; }
-  .audio-levels-heading p, .audio-privacy { font-size: 10px; }
+  .audio-levels-heading p, .audio-privacy { font-size: 11px; }
   .microphone-error, .microphone-hint { font-size: 11px; }
 }
 

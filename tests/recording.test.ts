@@ -79,6 +79,7 @@ function fixture() {
   }
   let capturedFps = 0
   const canvas = {
+    getContext: () => ({}),
     captureStream: (fps: number) => {
       if (configuration.captureError) throw new Error('Canvas blocked')
       capturedFps = fps
@@ -132,6 +133,19 @@ test('unsupported recording APIs, Canvas, and MIME formats are explained', () =>
   f.Recorder.isTypeSupported = () => false
   assert.equal(f.session.checkSupport(f.canvas), null)
   assert.match(f.session.getState().supportReason, /No compatible/)
+})
+
+test('unavailable, lost, or throwing Canvas contexts cannot start recording or clone audio', () => {
+  for (const getContext of [() => null, () => ({ isContextLost: () => true }), () => { throw new Error('Canvas disabled') }]) {
+    const f = fixture()
+    f.canvas.getContext = getContext as typeof f.canvas.getContext
+    f.session.start(f.canvas, f.clone)
+    assert.equal(f.session.getState().supported, false)
+    assert.match(f.session.getState().supportReason, /could not render/)
+    assert.equal(f.clones.length, 0)
+    assert.equal(f.fps(), 0)
+    assert.equal(f.Recorder.instances.length, 0)
+  }
 })
 
 test('recording combines exactly one Canvas video and a cloned audio track', async () => {

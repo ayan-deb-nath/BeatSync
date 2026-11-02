@@ -1,4 +1,5 @@
 import { recordingExtension, recordingFilename, selectRecordingMime } from './formats.ts'
+import { getCanvasContext } from '../visualizer/canvasContext.ts'
 
 export const RECORDING_LIMITS = { durationMs: 120_000, bytes: 64 * 1024 * 1024, frameRate: 30, videoBitrate: 3_000_000 } as const
 
@@ -85,6 +86,7 @@ export class RecordingSession {
     let mime: string | null = null
     if (!Recorder || !Stream) reason = 'Video recording is unavailable in this browser.'
     else if (!canvas || typeof canvas.captureStream !== 'function') reason = 'This browser cannot record the visualizer Canvas.'
+    else if (!getCanvasContext(canvas)) reason = 'Recording is unavailable because the visualizer Canvas could not render.'
     else if (typeof Recorder.isTypeSupported !== 'function') reason = 'This browser cannot verify a compatible audio/video recording format.'
     else {
       mime = selectRecordingMime(type => Recorder.isTypeSupported(type))

@@ -6,7 +6,7 @@
 
 .record-action.is-recording {
   color: #ffb8ca !important;
-  border-color: #ff607d70 !important;
+  border-color: #ff607d !important;
   background: #ff386810 !important;
 }
 
@@ -59,7 +59,7 @@
 .recording-limit {
   color: #a79ab9;
   margin-left: 5px;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .recording-message {
@@ -74,7 +74,7 @@
 }
 
 .recording-privacy {
-  font-size: 10px;
+  font-size: 11px;
   color: #a99ab9;
   line-height: 1.9;
   margin-top: 16px;
@@ -99,7 +99,7 @@
   flex-wrap: wrap;
   gap: 16px;
   margin-top: 18px;
-  font-size: 10px;
+  font-size: 11px;
   color: #b3a5c5;
 }
 
@@ -114,7 +114,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  min-height: 44px;
   font-size: 11px;
   padding: 10px 16px;
   border: 1px solid var(--stage-line);
@@ -154,14 +154,14 @@
     padding: 22px 16px;
   }
   .record-action {
-    font-size: 10px !important;
+    font-size: 11px !important;
   }
   .recording-message {
-    font-size: 10px;
+    font-size: 11px;
   }
   .recording-download-actions a, .recording-download-actions button {
     flex: 1;
-    font-size: 10px;
+    font-size: 11px;
     padding-inline: 10px;
   }
 }
