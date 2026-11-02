@@ -5,17 +5,27 @@ import { zeroMeasurements } from '../audio/types'
 import { VISUALIZER_CONFIG } from './engine/config'
 import { CanvasRenderer } from './engine/CanvasRenderer'
 import { VisualizerSimulation } from './engine/VisualizerSimulation'
+import { DEFAULT_SETTINGS } from './settings/preferences'
+import type { VisualizerSettings } from './settings/preferences'
 
 interface Props {
   measurementsRef: RefObject<AudioMeasurements>
   listening: boolean
+  settings?: VisualizerSettings
 }
 
-export function AudioReactiveCanvas({ measurementsRef, listening }: Props) {
+export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEFAULT_SETTINGS }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const listeningRef = useRef(listening)
   const simulationRef = useRef<VisualizerSimulation | null>(null)
   const [unavailable, setUnavailable] = useState(false)
+  const settingsRef = useRef(settings)
+  const redrawRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    settingsRef.current = settings
+    redrawRef.current?.()
+  }, [settings])
 
   useEffect(() => {
     listeningRef.current = listening
@@ -37,6 +47,12 @@ export function AudioReactiveCanvas({ measurementsRef, listening }: Props) {
     let width = 0, height = 0, pixelRatio = 0
     let disposed = false
 
+    const redraw = () => {
+      renderer.setTheme(settingsRef.current.theme)
+      renderer.draw(simulation, motion.matches)
+    }
+    redrawRef.current = redraw
+
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
       const dpr = Math.min(window.devicePixelRatio || 1, VISUALIZER_CONFIG.maxDpr)
@@ -47,7 +63,7 @@ export function AudioReactiveCanvas({ measurementsRef, listening }: Props) {
       context.setTransform(dpr, 0, 0, dpr, 0, 0)
       simulation.setMobile(width <= VISUALIZER_CONFIG.mobileBreakpoint)
       renderer.resize(width, height)
-      renderer.draw(simulation, motion.matches)
+      redraw()
     }
     const tick = (now: number) => {
       frame = null
@@ -60,7 +76,8 @@ export function AudioReactiveCanvas({ measurementsRef, listening }: Props) {
       if (pixelRatio !== Math.min(window.devicePixelRatio || 1, VISUALIZER_CONFIG.maxDpr)) resize()
       const dt = previous ? (now - previous) / 1000 : 1 / 60
       previous = now
-      simulation.step(dt, listeningRef.current ? measurementsRef.current : silence, listeningRef.current)
+      simulation.step(dt, listeningRef.current ? measurementsRef.current : silence, listeningRef.current, false, settingsRef.current.sensitivity)
+      renderer.setTheme(settingsRef.current.theme)
       renderer.draw(simulation, false)
       frame = requestAnimationFrame(tick)
     }
@@ -71,7 +88,7 @@ export function AudioReactiveCanvas({ measurementsRef, listening }: Props) {
       // Discard stale transients after hidden tabs or motion-preference changes.
       simulation.clear()
       resize()
-      renderer.draw(simulation, motion.matches)
+      redraw()
       if (!document.hidden && !motion.matches) frame = requestAnimationFrame(tick)
     }
     const observer = new ResizeObserver(resize)
@@ -90,6 +107,7 @@ export function AudioReactiveCanvas({ measurementsRef, listening }: Props) {
       motion.removeEventListener('change', refresh)
       simulation.clear()
       simulationRef.current = null
+      redrawRef.current = null
     }
   }, [measurementsRef])
 

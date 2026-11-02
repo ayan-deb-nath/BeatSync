@@ -1,4 +1,5 @@
 import { VISUALIZER_CONFIG } from './config.ts'
+import { clampSensitivity } from '../settings/preferences.ts'
 
 type Band = 'low' | 'mid' | 'high'
 
@@ -20,8 +21,9 @@ export class OnsetDetector {
     this.initialized = false
   }
 
-  update(level: number, dt: number): boolean {
+  update(level: number, dt: number, sensitivity = 1): boolean {
     const tuning = VISUALIZER_CONFIG.onset[this.band]
+    const thresholdScale = 1 / Math.sqrt(clampSensitivity(sensitivity))
     if (!this.initialized) {
       this.baseline = this.previous = level
       this.initialized = true
@@ -30,10 +32,13 @@ export class OnsetDetector {
     this.cooldown = Math.max(0, this.cooldown - dt)
     const excess = level - this.baseline
     const slope = (level - this.previous) / Math.max(dt, 0.001)
+    // Keep a baseline-relative noise margin even at the highest sensitivity.
+    const margin = Math.max(tuning.margin * thresholdScale, 0.025 + this.baseline * 0.2)
     // A sustained tone/noise must fall toward its baseline before it can re-arm.
-    if (excess < tuning.margin * 0.4) this.armed = true
+    if (excess < margin * 0.4) this.armed = true
     const onset = this.elapsed > VISUALIZER_CONFIG.onset.warmup && this.armed
-      && this.cooldown === 0 && level >= tuning.minimum && excess > tuning.margin && slope > tuning.slope
+      && this.cooldown === 0 && level >= tuning.minimum * thresholdScale && excess > margin
+      && slope > Math.max(0.08, tuning.slope * thresholdScale)
     if (onset) {
       this.armed = false
       this.cooldown = tuning.cooldown

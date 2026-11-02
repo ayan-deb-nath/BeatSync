@@ -1,6 +1,7 @@
 import type { AudioMeasurements } from '../../audio/types.ts'
 import { VISUALIZER_CONFIG as config } from './config.ts'
 import { OnsetDetector } from './OnsetDetector.ts'
+import { clampSensitivity } from '../settings/preferences.ts'
 
 export interface Particle {
   x: number; y: number
@@ -39,19 +40,20 @@ export class VisualizerSimulation {
     this.resetOnsets()
   }
 
-  step(dt: number, levels: AudioMeasurements, listening: boolean, reducedMotion = false) {
+  step(dt: number, levels: AudioMeasurements, listening: boolean, reducedMotion = false, sensitivity = 1) {
     dt = Math.max(0, Math.min(0.05, dt))
     if (reducedMotion) { this.clear(); return }
     this.time += dt
-    const target = listening ? 1 - Math.exp(-unit(levels.volume) * config.core.gain) : 0
+    sensitivity = clampSensitivity(sensitivity)
+    const target = listening ? 1 - Math.exp(-unit(levels.volume) * config.core.gain * sensitivity) : 0
     this.energy += (target - this.energy) * (1 - Math.exp(-dt / (target > this.energy ? config.core.attack : config.core.release)))
     this.coreScale = 1 + this.energy * config.core.expansion
     if (listening) {
-      if (this.low.update(unit(levels.low), dt) && this.waves.length < config.waves.maximum) {
+      if (this.low.update(unit(levels.low), dt, sensitivity) && this.waves.length < config.waves.maximum) {
         this.waves.push({ age: 0, lifetime: config.waves.lifetime, strength: unit(levels.low) })
       }
-      if (this.mid.update(unit(levels.mid), dt)) this.emit(false)
-      if (this.high.update(unit(levels.high), dt)) this.emit(true)
+      if (this.mid.update(unit(levels.mid), dt, sensitivity)) this.emit(false)
+      if (this.high.update(unit(levels.high), dt, sensitivity)) this.emit(true)
     } else this.resetOnsets()
 
     let write = 0

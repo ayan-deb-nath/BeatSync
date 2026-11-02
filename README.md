@@ -2,7 +2,7 @@
 
 Turn Your Voice Into Visual Art.
 
-BeatSync transforms opt-in live microphone input into neon visual art. Phase 4 adds an audio-reactive Canvas 2D stage: a glowing core and rings, cyan shockwaves, purple bursts, and high-frequency sparks. It preserves the Neon Festival design, microphone lifecycle, and live meters from earlier phases.
+BeatSync transforms opt-in live microphone input into neon visual art. Phase 5 adds three live visual themes, adjustable visualization sensitivity, saved preferences, and native fullscreen performance mode. The Canvas stage, microphone lifecycle, live meters, and responsive Neon Festival design from earlier phases remain intact.
 
 ## Technology
 
@@ -55,6 +55,8 @@ src/
       hooks/useMicrophoneAudio.ts
     visualizer/                 Canvas component, stage composition, controls, styles
       engine/                   Tuning, onset detection, simulation, Canvas drawing
+      settings/                 Typed palettes, preference validation, persistence hook
+      fullscreen/               Native fullscreen controller and React hook
   styles/index.css              Tailwind import, theme, responsive styles
   main.tsx                      React entry point with StrictMode
   vite-env.d.ts                 Vite client types
@@ -62,11 +64,13 @@ vite.config.ts                  React and Tailwind integrations
 tsconfig*.json                  Strict app and tooling configurations
 tests/audio.test.ts             Analysis and lifecycle tests with browser API doubles
 tests/visualizer.test.ts        Browser-independent visualization tests
+tests/settings.test.ts          Palettes, persistence, sensitivity and noise protection
+tests/fullscreen.test.ts        Native-state synchronization and fullscreen failures
 ```
 
 Features own their UI and, when needed, their hooks and types. `App` creates one `useMicrophoneAudio` instance shared by the hero and visualizer controls. `MicrophoneSession` owns browser resources, `analysis.ts` owns measurement math, and React components own presentation. `VisualizerPreview` composes the Canvas stage, microphone status, controls, and meters. `AudioReactiveCanvas` reads the existing stable measurement ref without subscribing to per-frame React state. It replaces the obsolete `AmbientOrbit` CSS artwork. No second microphone stream or AudioContext is created. `SiteHeader` provides visible anchor navigation that wraps on mobile.
 
-Tailwind v4 uses `@import "tailwindcss"` and CSS-first `@theme` tokens; no legacy Tailwind or PostCSS configuration is needed. The existing design stays in `src/styles/index.css`; audio UI additions are in the feature's `audio.css`. CSS variables provide a starting point for future visual themes.
+Tailwind v4 uses `@import "tailwindcss"` and CSS-first `@theme` tokens; no legacy Tailwind or PostCSS configuration is needed. The existing design stays in `src/styles/index.css`; audio UI additions are in the feature's `audio.css`. Visualizer-specific theme accents and fullscreen layouts live in `visualizer.css`.
 
 ## Current behavior and accessibility
 
@@ -74,15 +78,48 @@ Tailwind v4 uses `@import "tailwindcss"` and CSS-first `@theme` tokens; no legac
 - Semantic landmarks, heading hierarchy, skip link, and visible keyboard focus
 - Working Start/Stop Beatboxing button and synchronized microphone panel controls
 - Neon Festival Canvas with live core/ring response, transient shockwaves, bursts, and sparks
-- Sensitivity, visual theme, fullscreen, and recording remain disabled and marked coming soon
-- Neon Festival, Cyberpunk, and Galaxy shown as planned theme options
+- Working sensitivity slider with current value, keyboard support, and reset to 1.00x
+- Three working visual themes: Neon Festival, Cyberpunk, and Galaxy
+- Native fullscreen performance mode when supported; honest unsupported/error feedback
+- Recording remains disabled and labeled Coming soon
 - Inactive, requesting permission, listening, and error states with accessible status announcements
 - Four native accessible meters; values update at 10 Hz without a live-region announcement on every sample
 - Working Visualizer, How It Works, and About anchor links
 - Decorative SVGs hidden from assistive technology; visual concept has a text description
 - Reduced-motion preference renders a static stage and leaves audio controls/meters usable
 - No microphone request on load; explicit Start is always required
-- Local analysis only; no upload, storage, recording, external audio APIs, or speaker monitoring
+- Local analysis only; no audio upload/storage/recording, external audio APIs, or speaker monitoring
+- Only visual theme and sensitivity preferences are saved locally
+
+## Themes and saved preferences
+
+| Theme | Appearance |
+| --- | --- |
+| Neon Festival (default) | Electric cyan, purple, and pink; luminous rings, cyan shockwaves, purple bursts, cyan/pink sparks |
+| Cyberpunk | Hot pink, red, orange, and charcoal; contrasting rings, pink/red shockwaves, orange bursts, angular accents |
+| Galaxy | Cosmic blue, violet, and lavender; atmospheric rings, soft blue waves, star-shaped light accents, quieter ambience |
+
+`settings/themes.ts` defines one typed palette/motif configuration per theme. A single Canvas renderer uses these configurations; it rebuilds its three small glow sprites and background gradient only when the theme changes. The Canvas, simulation, existing particles, audio stream, and AudioContext are retained. Stage border, labels, slider, and relevant controls use scoped CSS variables from the same palette. Reduced-motion users get an immediate static repaint when changing themes, without restarting an animation loop.
+
+`useVisualizerSettings` owns settings inside the visualizer subtree. Settings changes cause a normal control update, not per-frame React renders. `AudioReactiveCanvas` keeps the latest settings in a ref read by its existing render loop. Theme changes and sensitivity changes do not reset onset calibration or microphone capture.
+
+Theme and sensitivity are saved as a small JSON object under `beatsync.visualizer.v1` in localStorage. Saved themes are checked against the three known IDs; unknown values fall back to Neon Festival. Saved sensitivity must be a finite number, is clamped to 0.5–2.0, and rounded to 0.05 steps; invalid values fall back to 1.0. Broken JSON is safely ignored. If writing storage is blocked, settings still work for the current session and an inline message explains that they cannot persist. Microphone permissions, active listening state, audio samples, and measurements are never persisted. Restoring preferences never starts listening or enters fullscreen.
+
+## Sensitivity
+
+The **0.50x–2.00x** slider defaults to **1.00x** and updates the visual response in real time. **Reset to 1.00x** restores the default. It does not change microphone samples, audio analysis, or the raw level meters.
+
+Core energy uses `1 - exp(-5 × RMS × sensitivity)`, keeping a smooth, saturating response rather than clipping boosted measurements. Onset detection continues to use the original, unamplified band levels. Absolute minimum levels, baseline margins, and rising-slope thresholds scale by `1 / sqrt(sensitivity)`. This makes quieter transients easier to see at high sensitivity, and requires stronger sounds at low sensitivity.
+
+The effective baseline margin is `max(baseMargin / sqrt(sensitivity), 0.025 + baseline × 0.2)`, with a minimum slope threshold of 0.08 per second. This preserves a noise-relative floor even at 2x. The adaptive baseline, initial warm-up, cooldowns, re-arming latch, particle caps, and shockwave cap remain active. Merely moving the slider over a constant input cannot fabricate a positive audio slope. Gain changes blend through the existing visual attack/release envelope.
+
+## Fullscreen performance mode
+
+Press **Fullscreen** in Display to request native fullscreen for the visualizer section. It presents only the expanded Canvas, BeatSync branding, theme/sensitivity summary, microphone status, Start/Stop, and Exit Fullscreen controls. Existing audio capture continues. Exit through the overlay button, the browser's native exit control, or Escape where supported. Keyboard focus moves to Exit on entry and returns to the Display button on exit.
+
+`fullscreen/FullscreenController.ts` derives active state from `document.fullscreenElement`, subscribes to `fullscreenchange` and `fullscreenerror`, and serializes pending requests. The React hook subscribes to that state and removes listeners on cleanup. Requests are made synchronously from a user click; no entry is automatic or restored from preferences. Rejection displays an inline error without pretending entry succeeded. Exit failures keep the actual active state and show an overlay error; native browser exit remains available. Entering/exiting fullscreen resizes the existing Canvas through ResizeObserver; it does not recreate the renderer, stream, or AudioContext.
+
+Native fullscreen availability depends on the browser, device, and embed Permissions Policy. Some mobile Safari environments do not offer arbitrary-element fullscreen. If the standard API is missing or `fullscreenEnabled` is false, the button is disabled with an explanation; there is no simulated fullscreen fallback. See [MDN Fullscreen API compatibility and permissions](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API). Actual support is feature-detected rather than inferred from a browser name.
 
 ## Audio architecture and measurements
 
@@ -122,12 +159,12 @@ Browsers do not provide an abort mechanism for an outstanding permission prompt.
 
 | Measurement | Visual mapping |
 | --- | --- |
-| RMS volume | `1 - exp(-5 × volume)` drives brightness and core expansion (maximum 16%); 90 ms attack / 240 ms release smooth the visual envelope |
+| RMS volume | `1 - exp(-5 × volume × sensitivity)` drives brightness and core expansion (maximum 16%); 90 ms attack / 240 ms release smooth the visual envelope |
 | Low (20–250 Hz) onset | Cyan expanding ring, fading over 1.1 seconds |
 | Mid (250 Hz–2 kHz) onset | 16 outward purple particles with velocity decay, lifetime 1.15 seconds |
 | High (2–16 kHz) onset | 7 small cyan/pink sparks with short trails, lifetime 0.38 seconds |
 
-Each band detector seeds its baseline from the first actual sample and ignores events for 350 ms after starting/resuming. It tracks a baseline with an 800 ms time constant and requires a positive slope, an absolute floor, and sufficient excess above that baseline. It re-arms only after energy returns near the baseline. Low/mid/high minimum levels are 0.13/0.10/0.08, baseline margins are 0.065/0.055/0.045, and cooldowns are 320/240/140 ms. These are conservative heuristics for relative audio levels, **not kick/snare/hi-hat classification**. Microphone hardware and browser processing may require future tuning.
+Each band detector seeds its baseline from the first actual sample and ignores events for 350 ms after starting/resuming. It tracks a baseline with an 800 ms time constant and requires a positive slope, an absolute floor, and sufficient excess above that baseline. It re-arms only after energy returns near the baseline. At default sensitivity, low/mid/high minimum levels are 0.13/0.10/0.08 and configured margins are 0.065/0.055/0.045, with the additional noise-relative floor described above. Cooldowns remain 320/240/140 ms at every sensitivity. These are conservative heuristics for relative audio levels, **not kick/snare/hi-hat classification**. Microphone hardware and browser processing may require future tuning.
 
 Idle mode has quiet rings and sparse ambient lights but emits no audio-triggered particles or shockwaves. Stop immediately disables new events and resets onset state; existing effects fade out naturally and the core returns to rest. Starting again restores the detector warmup. No random values are used as audio input or for triggering effects.
 
@@ -152,6 +189,11 @@ Hidden tabs cancel the render frame and clear stale effects. Returning starts wi
 11. Hold a steady tone or leave only room noise: it should not continuously create bursts. Press Stop during an effect: existing waves/particles should fade within about 1.2 seconds, with no new audio events.
 12. Resize the window, rotate a phone, switch browser zoom/DPR, and hide/return to the tab. Confirm the stage stays centered, sharp, and unclipped, without stale bursts on return. Test a 14-inch laptop and lower-powered mobile hardware for practical smoothness.
 13. Enable the OS/browser **Reduce motion** preference before loading and while running. The stage should remain static with no particles or shockwaves; microphone controls and level meters should remain functional.
+14. While listening, switch rapidly between all three themes. Confirm the Canvas and stage accents change, the meters keep running, and the microphone permission/capture indicator does not restart.
+15. Compare 0.50x, 1.00x, and 2.00x while repeating similar sounds. Core response and onset sensitivity should change, but the raw meters should remain unscaled. Confirm room noise does not create endless events, and Reset restores 1.00x.
+16. Choose a theme and sensitivity, then reload. Confirm both return without requesting microphone access. To test invalid saved values, set the `beatsync.visualizer.v1` key to malformed JSON in browser developer tools and reload; defaults should be restored safely.
+17. While listening, enter/exit Fullscreen several times, using the overlay Exit button and native Escape/browser controls. Confirm the same listening session continues, settings are retained, Canvas resizes, and keyboard focus is restored. Also test Start/Stop within fullscreen.
+18. Test fullscreen on a desktop, tablet, and supported mobile device, including landscape orientation. An unsupported browser should show a disabled button and explanation. Check a denied fullscreen request or restricted embed for truthful error feedback. Reduced motion should stay static in fullscreen while controls remain functional.
 
 ## Compatibility and validation limits
 
@@ -159,16 +201,14 @@ Microphone capture requires a secure context: HTTPS or a trustworthy loopback or
 
 The implementation feature-detects `getUserMedia` and AudioContext, with a prefixed `webkitAudioContext` fallback. Target current Chrome, Edge, Firefox, and Safari. Mobile browser interruptions and background scheduling vary; an interrupted session must be restarted explicitly. No promise of legacy-browser support is made.
 
-Automated validation includes TypeScript, the production build, **32 Node tests** (all original 19 audio tests plus 13 visualization tests), responsive Chrome checks, and Chrome's synthetic capture device exercising real Web Audio and Canvas core response. Browser checks cover Canvas initialization, DPR cap, static reduced motion, unmount cleanup, and existing start/stop/error behavior. Synthetic browser tests do **not** verify a native permission prompt, physical microphone/beatboxing, device-specific performance, Firefox, or Safari. Those require the manual checks above. There is no configured lint script. No dependencies were added for tests; they use Node's built-in test runner and type stripping.
+Automated validation includes TypeScript, the production build, **47 Node tests** (all 32 previous tests plus 8 settings/sensitivity tests and 7 fullscreen tests), responsive Chrome checks, and Chrome's synthetic capture device exercising real Web Audio and Canvas. Browser checks cover rapid live theme changes, sensitivity during capture, valid/corrupt preference restoration, native fullscreen cycles, focus restoration, synthetic fullscreen rejection, Canvas initialization, DPR cap, reduced-motion theme repainting, visibility behavior, and cleanup. Synthetic browser tests do **not** verify a native microphone permission prompt, physical microphone/beatboxing, device-specific performance, Firefox, or Safari. Chrome mobile-sized viewport checks are not physical mobile-device tests. Those require the manual checks above. There is no configured lint script. No dependencies were added for tests; they use Node's built-in test runner and type stripping.
 
 ## Planned features
 
-- Multiple visual themes
-- Audio sensitivity controls
 - Performance recording
 
-These features are not implemented in Phase 4. Microphone analysis still runs when explicitly started, including under reduced motion. No recording, backend, AI classification, or audio uploads are implemented.
+Recording is not implemented in Phase 5. Microphone analysis still runs when explicitly started, including under reduced motion. No backend, database, AI classification, or audio uploads are implemented. Phase 6 has not begun.
 
 ## Deployment
 
-Ready for a future GitHub repository and Vercel deployment. In Vercel, select the Vite framework preset, use `npm run build`, and set the output directory to `dist`. No environment variables or backend are currently needed. The GitHub footer text reserves space for a real repository link without inventing a URL. No remote repository or deployment is created in Phase 4.
+Ready for a future GitHub repository and Vercel deployment. In Vercel, select the Vite framework preset, use `npm run build`, and set the output directory to `dist`. No environment variables or backend are currently needed. The GitHub footer text reserves space for a real repository link without inventing a URL. No remote repository or deployment is created in Phase 5.
