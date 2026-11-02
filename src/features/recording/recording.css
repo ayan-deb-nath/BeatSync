@@ -1,0 +1,167 @@
+.record-action {
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 8px;
+}
+
+.record-action.is-recording {
+  color: #ffb8ca !important;
+  border-color: #ff607d70 !important;
+  background: #ff386810 !important;
+}
+
+.record-action:disabled {
+  opacity: .65;
+}
+
+.record-action .record-dot, .recording-active {
+  background: #ff547a;
+}
+
+.recording-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: 11px;
+  color: #e4d9ef;
+}
+
+.recording-panel {
+  padding: 24px 28px;
+  background: #12101c;
+  border-top: 1px solid var(--line);
+}
+
+.recording-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.recording-heading h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.recording-heading .record-dot {
+  background: #a993bd;
+}
+
+.recording-heading .recording-active {
+  background: #ff547a;
+}
+
+.recording-limit {
+  color: #a79ab9;
+  margin-left: 5px;
+  font-size: 9px;
+}
+
+.recording-message {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #b9afc9;
+  margin: 8px 0;
+}
+
+.recording-message[role="alert"] {
+  color: #ffb6d8;
+}
+
+.recording-privacy {
+  font-size: 10px;
+  color: #a99ab9;
+  line-height: 1.9;
+  margin-top: 16px;
+}
+
+.completed-recording {
+  max-width: 660px;
+}
+
+.completed-recording video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  margin: 16px 0 12px;
+  background: #090910;
+  border: 1px solid var(--stage-line);
+  border-radius: 8px;
+}
+
+.recording-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 18px;
+  font-size: 10px;
+  color: #b3a5c5;
+}
+
+.recording-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.recording-download-actions a, .recording-download-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  font-size: 11px;
+  padding: 10px 16px;
+  border: 1px solid var(--stage-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.recording-download-actions a {
+  color: var(--stage-accent);
+  background: var(--stage-soft);
+}
+
+.recording-download-actions button {
+  color: #ccbcd7;
+  background: #0b0b13;
+}
+
+.recording-download-actions a:hover, .recording-download-actions button:hover {
+  border-color: var(--stage-accent);
+}
+
+.visualizer:fullscreen > .recording-panel {
+  display: none;
+}
+
+.performance-recording-message {
+  padding: 10px 20px;
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: center;
+  background: #17111e;
+  color: #e0bbd5;
+}
+
+@media (max-width: 600px) {
+  .recording-panel {
+    padding: 22px 16px;
+  }
+  .record-action {
+    font-size: 10px !important;
+  }
+  .recording-message {
+    font-size: 10px;
+  }
+  .recording-download-actions a, .recording-download-actions button {
+    flex: 1;
+    font-size: 10px;
+    padding-inline: 10px;
+  }
+}

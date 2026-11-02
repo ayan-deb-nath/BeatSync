@@ -11,9 +11,14 @@ import type { MicrophoneAudio } from '../audio/hooks/useMicrophoneAudio'
 import { useFullscreen } from './fullscreen/useFullscreen'
 import { useVisualizerSettings } from './settings/useVisualizerSettings'
 import { THEMES } from './settings/themes'
+import { usePerformanceRecording } from '../recording/usePerformanceRecording'
+import { RecordingAction, RecordingPanel } from '../recording/RecordingControls'
 
 export function VisualizerPreview({ audio }: { audio: MicrophoneAudio }) {
   const stageRef = useRef<HTMLElement>(null)
+  const captureRef = useRef<HTMLCanvasElement>(null)
+  const captureRedrawRef = useRef<(() => void) | null>(null)
+  const recording = usePerformanceRecording(captureRef, audio, captureRedrawRef)
   const fullscreenButtonRef = useRef<HTMLButtonElement>(null)
   const exitButtonRef = useRef<HTMLButtonElement>(null)
   const wasFullscreen = useRef(false)
@@ -49,11 +54,17 @@ export function VisualizerPreview({ audio }: { audio: MicrophoneAudio }) {
             onClick={() => { if (canStop) audio.stop(); else void audio.start() }}>
             <Icon name="mic" />{canStop ? 'Stop Beatboxing' : 'Start Beatboxing'}
           </button>
+          <RecordingAction recording={recording} compact />
           <button ref={exitButtonRef} type="button" className="exit-fullscreen" disabled={fullscreen.pending} onClick={() => void fullscreen.toggle()}>
             <Icon name="expand" />Exit Fullscreen
           </button>
         </div>
       </div>
+      {fullscreen.active && (recording.busy || recording.state.result || recording.state.status === 'error') && (
+        <p className="performance-recording-message" role="status">{recording.state.result
+          ? 'Recording ready. Exit fullscreen to preview, download, or discard your video.'
+          : recording.state.message}</p>
+      )}
       {fullscreen.active && fullscreen.error && <p className="performance-error" role="alert">{fullscreen.error}</p>}
       <div className="preview-toolbar">
         <div className="preview-title"><span className="preview-mark" aria-hidden="true" /><div><h2 id="preview-heading">Audio Visualizer</h2><p>Live reactions when listening · Calm when inactive</p></div></div>
@@ -61,11 +72,12 @@ export function VisualizerPreview({ audio }: { audio: MicrophoneAudio }) {
       </div>
       <div className="visualizer-stage">
         <div className="stage-heading"><span className="stage-kicker">THE STAGE IS YOURS</span><p>Find your frequency.</p></div>
-        <AudioReactiveCanvas measurementsRef={audio.measurementsRef} listening={audio.state.status === 'listening'} settings={settings} />
+        <AudioReactiveCanvas measurementsRef={audio.measurementsRef} listening={audio.state.status === 'listening'} settings={settings} captureRef={captureRef} captureRedrawRef={captureRedrawRef} />
         <MicrophoneStatus state={audio.state} />
       </div>
       <VisualizerControls audio={audio} settings={settings} updateSettings={updateSettings} fullscreen={fullscreen}
-        fullscreenButtonRef={fullscreenButtonRef} storageUnavailable={storageUnavailable} />
+        fullscreenButtonRef={fullscreenButtonRef} storageUnavailable={storageUnavailable} recording={recording} />
+      <RecordingPanel recording={recording} listening={audio.state.status === 'listening'} />
       <AudioLevelMeter audio={audio} />
       <div className="preview-footnote"><span className="status-dot" /><p>Powered by your sound. Frequency-driven effects, not sound classification.</p></div>
     </section>

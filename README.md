@@ -2,7 +2,7 @@
 
 Turn Your Voice Into Visual Art.
 
-BeatSync transforms opt-in live microphone input into neon visual art. Phase 5 adds three live visual themes, adjustable visualization sensitivity, saved preferences, and native fullscreen performance mode. The Canvas stage, microphone lifecycle, live meters, and responsive Neon Festival design from earlier phases remain intact.
+BeatSync transforms opt-in live microphone input into neon visual art. Phase 6 adds local performance recording and video export: record the actual Canvas with microphone audio, preview the result, and download it. The three themes, sensitivity, fullscreen mode, saved preferences, audio lifecycle, and responsive interface remain intact.
 
 ## Technology
 
@@ -53,6 +53,7 @@ src/
   features/
     audio/                      Analysis, resource lifecycle, hook, meters, status, styles
       hooks/useMicrophoneAudio.ts
+    recording/                  Recorder lifecycle, hook, formats, controls, preview, styles
     visualizer/                 Canvas component, stage composition, controls, styles
       engine/                   Tuning, onset detection, simulation, Canvas drawing
       settings/                 Typed palettes, preference validation, persistence hook
@@ -66,6 +67,7 @@ tests/audio.test.ts             Analysis and lifecycle tests with browser API do
 tests/visualizer.test.ts        Browser-independent visualization tests
 tests/settings.test.ts          Palettes, persistence, sensitivity and noise protection
 tests/fullscreen.test.ts        Native-state synchronization and fullscreen failures
+tests/recording.test.ts         Recorder lifecycle, formats, limits, ownership, URL cleanup
 ```
 
 Features own their UI and, when needed, their hooks and types. `App` creates one `useMicrophoneAudio` instance shared by the hero and visualizer controls. `MicrophoneSession` owns browser resources, `analysis.ts` owns measurement math, and React components own presentation. `VisualizerPreview` composes the Canvas stage, microphone status, controls, and meters. `AudioReactiveCanvas` reads the existing stable measurement ref without subscribing to per-frame React state. It replaces the obsolete `AmbientOrbit` CSS artwork. No second microphone stream or AudioContext is created. `SiteHeader` provides visible anchor navigation that wraps on mobile.
@@ -81,14 +83,14 @@ Tailwind v4 uses `@import "tailwindcss"` and CSS-first `@theme` tokens; no legac
 - Working sensitivity slider with current value, keyboard support, and reset to 1.00x
 - Three working visual themes: Neon Festival, Cyberpunk, and Galaxy
 - Native fullscreen performance mode when supported; honest unsupported/error feedback
-- Recording remains disabled and labeled Coming soon
+- Separate opt-in recording, elapsed timer, native preview, download, and confirmed discard
 - Inactive, requesting permission, listening, and error states with accessible status announcements
 - Four native accessible meters; values update at 10 Hz without a live-region announcement on every sample
 - Working Visualizer, How It Works, and About anchor links
 - Decorative SVGs hidden from assistive technology; visual concept has a text description
 - Reduced-motion preference renders a static stage and leaves audio controls/meters usable
 - No microphone request on load; explicit Start is always required
-- Local analysis only; no audio upload/storage/recording, external audio APIs, or speaker monitoring
+- Local analysis and explicit local recording only; no media uploads, external audio APIs, or speaker monitoring
 - Only visual theme and sensitivity preferences are saved locally
 
 ## Themes and saved preferences
@@ -121,7 +123,51 @@ Press **Fullscreen** in Display to request native fullscreen for the visualizer 
 
 Native fullscreen availability depends on the browser, device, and embed Permissions Policy. Some mobile Safari environments do not offer arbitrary-element fullscreen. If the standard API is missing or `fullscreenEnabled` is false, the button is disabled with an explanation; there is no simulated fullscreen fallback. See [MDN Fullscreen API compatibility and permissions](https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API). Actual support is feature-detected rather than inferred from a browser name.
 
-## Audio architecture and measurements
+## Local performance recording
+
+Recording uses native browser APIs only: `Canvas.captureStream()`, a microphone track clone, `MediaStream`, `MediaRecorder`, `Blob`, and object URLs. It requires a separate **Start Recording** click after microphone listening is active. Granting microphone access, loading saved preferences, entering fullscreen, or returning to a page never starts recording automatically.
+
+`recording/RecordingSession.ts` owns recorder state, chunks, elapsed time, owned tracks, timers, and object URLs. `usePerformanceRecording` connects it to React, microphone shutdown, page lifecycle events, and unsaved-work warnings. `formats.ts` handles MIME selection, container extensions, filenames, and timer formatting. `RecordingControls.tsx` presents normal/fullscreen actions and a native video preview. No recording data enters localStorage; it still contains only theme and sensitivity preferences.
+
+The recorder captures the **same stable Canvas element** users see at up to **30 FPS**. Its dark background, rings, particles, theme colors, and subtle BeatSync/theme text are drawn into Canvas pixels and therefore appear in exports. DOM controls, timers, microphone meters, and other page decorations are not recorded. There is no desktop/tab capture or screen-sharing permission request.
+
+`MicrophoneSession.cloneRecordingTrack()` clones a live track from the existing microphone stream, without another `getUserMedia` call or AudioContext. The recorder combines that clone and the Canvas video track in one MediaStream. These two tracks belong to recording; stopping recording stops them without stopping the original microphone. The existing analysis graph remains disconnected from speakers. Browser-default microphone processing is retained; no new recording-specific audio processing is added.
+
+Microphone shutdown notifies recording synchronously before original tracks are stopped. Recording requests finalization, releases its clone and video track, then handles the recorder's final `dataavailable`/`stop` events. The UI reports the reason. Device disconnection or an ended recording track also requests finalization. Encoder errors, empty output, unsupported containers, or stalled start/finalization produce an error instead of a success claim.
+
+### Record, preview, download, and discard
+
+1. Start Beatboxing and allow microphone access. Confirm **Listening** and live meter movement.
+2. Press **Start Recording** in Capture (or the fullscreen overlay). Confirm the red recording indicator, elapsed `00:00` timer, and explicit video/microphone recording status.
+3. Perform. Theme, sensitivity, and fullscreen changes continue to affect the same Canvas and recording without reopening the microphone.
+4. Press **Stop Recording**. Listening continues while the recorder finalizes. Alternatively, Stop Beatboxing safely finalizes the take and releases microphone capture too.
+5. Once nonempty output is ready, review its duration, size, and container. The native video has Play/Pause/timeline controls and **never autoplays**. Use headphones or stop listening before playback so speaker output does not affect the live microphone analysis. If the browser cannot preview the output, download is still available with an explanation.
+6. Choose **Download Video** to request a local save. The filename is `BeatSync-Performance-YYYY-MM-DD-HHMMSS.webm` or `.mp4`, using local time and the actual recorder output container. Verify the browser saved the file; an anchor click can only confirm a download was requested.
+7. Choose **Discard Recording** and confirm before recording another take. A ready take is never silently replaced. Downloading does not delete it; discarding or closing the page releases it from browser memory.
+
+Finished media remains only in temporary browser memory until discarded or the page closes. Discard/unmount revokes its object URL. Browsers may show a native unsaved-work warning when leaving during recording or before a download has been requested; this is not guaranteed on mobile or forced termination. Always download important takes before leaving.
+
+### Formats, quality, and safety limits
+
+MIME candidates are probed with `MediaRecorder.isTypeSupported()` in this order: WebM VP8/Opus, WebM VP9/Opus, generic WebM, MP4 H.264/AAC, then generic MP4. A candidate must pass the browser's check; MP4 is not assumed available. Final Blob type and extension follow the recorder's actual MIME type. Missing recording APIs, Canvas capture, or a verified format disable recording with an explanation while other BeatSync features remain usable. Combined-stream constructor/start failures are handled too; explicit NotSupported/Security failures disable recording for that session.
+
+The target is 30 FPS Canvas capture, approximately 3 Mbps video and 128 kbps audio. These are browser hints, not guaranteed encoding rates or output dimensions. Exports use the Canvas's current pixel dimensions, including its capped DPR; fullscreen/resizing can change those dimensions during a take. Chrome synthetic tests exercised fullscreen changes successfully, but encoder behavior and playback compatibility can vary across browsers.
+
+Recordings auto-finalize at approximately **two minutes**, using actual monotonic elapsed time from the successful `start()` call rather than counting chunks or relying on delayed browser start events. Recording status is confirmed by the native start event. UI time updates at most once per second. Normal chunks arrive in roughly one-second slices. Collected data has a **64 MiB hard cap**; at 60 MiB finalization is requested to leave room for final data. A chunk that exceeds the hard cap causes the take to be abandoned with an error, rather than offering a potentially truncated file. Browser-internal buffering/chunk scheduling cannot be strictly bounded by application code; timeslices are not guaranteed under load.
+
+Hiding the tab finalizes recording with a message because Canvas rendering pauses in hidden tabs. Microphone listening remains a separate user-controlled session unless the browser interrupts it. Page exit/unmount cleans all owned recording resources. At most one recorder is active, and start/stop watchdogs fail cleanly if browser events stall. Reduced-motion recordings contain the actual static stage and microphone audio; occasional identical-pixel redraws and `requestFrame()` calls provide held frames without animating the artwork.
+
+**Privacy:** Your performance is recorded locally in your browser. Nothing is uploaded. You choose whether to download it. No backend, accounts, cloud storage, media analytics, or external recording APIs are used. Audio/video sync is delegated to the native recorder; physical-device latency and drift have not been measured.
+
+### Recording validation
+
+Automated recorder tests use browser API doubles to check formats, API absence, start/stop/rapid clicks, elapsed limits, memory limits, track ownership, empty output, errors/retry, filenames, and object URL cleanup. Chrome synthetic audio tests created a real **WebM VP8/Opus** file and decoded it through a native video element; its playback capture exposed **one audio and one video track**. They also checked theme/sensitivity/fullscreen continuity, recording start from fullscreen, stopping only recording versus stopping microphone listening, confirmed discard, hidden-tab finalization, and reduced-motion output. This does not establish universal browser support or verify physical microphone recording.
+
+For manual verification, record 10–20 seconds of real beatboxing, change theme/sensitivity while recording, enter/exit fullscreen, and stop recording. Confirm listening continues, play the preview explicitly, download and play the saved file in another player, and verify audio/video synchronization by a sharp sound with a visible reaction. Repeat with microphone Stop, device disconnection, a hidden tab, and reduced motion. Let a take reach two minutes to verify automatic finalization on your device. Test unsupported browsers for honest disabled controls and test both Cancel and Confirm when discarding.
+
+See [MDN MediaRecorder](https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder) for API/format compatibility. Safari, Firefox, mobile encoders, native save dialogs, physical microphone sync, and low-memory behavior require device testing. A nonempty recorder output can still be unsupported by a particular player; preview failures are reported without removing download access.
+
+## Audio processing details
 
 `useMicrophoneAudio` creates an inert `MicrophoneSession`, subscribes to status changes with `useSyncExternalStore`, and stops it on unmount or `pagehide`. This is safe under React StrictMode: creating or mounting the hook never creates an AudioContext or requests a microphone.
 
@@ -201,14 +247,12 @@ Microphone capture requires a secure context: HTTPS or a trustworthy loopback or
 
 The implementation feature-detects `getUserMedia` and AudioContext, with a prefixed `webkitAudioContext` fallback. Target current Chrome, Edge, Firefox, and Safari. Mobile browser interruptions and background scheduling vary; an interrupted session must be restarted explicitly. No promise of legacy-browser support is made.
 
-Automated validation includes TypeScript, the production build, **47 Node tests** (all 32 previous tests plus 8 settings/sensitivity tests and 7 fullscreen tests), responsive Chrome checks, and Chrome's synthetic capture device exercising real Web Audio and Canvas. Browser checks cover rapid live theme changes, sensitivity during capture, valid/corrupt preference restoration, native fullscreen cycles, focus restoration, synthetic fullscreen rejection, Canvas initialization, DPR cap, reduced-motion theme repainting, visibility behavior, and cleanup. Synthetic browser tests do **not** verify a native microphone permission prompt, physical microphone/beatboxing, device-specific performance, Firefox, or Safari. Chrome mobile-sized viewport checks are not physical mobile-device tests. Those require the manual checks above. There is no configured lint script. No dependencies were added for tests; they use Node's built-in test runner and type stripping.
+Automated validation includes TypeScript, the production build, **69 Node tests**, preserving all previous 47 tests and adding recording/ownership checks, plus responsive Chrome and synthetic capture/recording tests. Browser checks cover rapid live theme changes, sensitivity during capture, preference restoration, native fullscreen cycles, recording output with decoded audio/video, focus restoration, Canvas/DPR/reduced-motion behavior, visibility, and cleanup. Synthetic browser tests do **not** verify a native microphone permission prompt, physical microphone/beatboxing, device-specific performance, Firefox, or Safari. Chrome mobile-sized viewport checks are not physical mobile-device tests. Those require manual testing. There is no configured lint script. No dependencies were added for tests; they use Node's built-in test runner and type stripping.
 
-## Planned features
+## Scope
 
-- Performance recording
-
-Recording is not implemented in Phase 5. Microphone analysis still runs when explicitly started, including under reduced motion. No backend, database, AI classification, or audio uploads are implemented. Phase 6 has not begun.
+Phase 6 is complete. Microphone listening and recording are separate explicit actions. No backend, database, AI classification, cloud storage, accounts, or audio uploads are implemented. Phase 7 has not begun.
 
 ## Deployment
 
-Ready for a future GitHub repository and Vercel deployment. In Vercel, select the Vite framework preset, use `npm run build`, and set the output directory to `dist`. No environment variables or backend are currently needed. The GitHub footer text reserves space for a real repository link without inventing a URL. No remote repository or deployment is created in Phase 5.
+Ready for a future GitHub repository and Vercel deployment. In Vercel, select the Vite framework preset, use `npm run build`, and set the output directory to `dist`. No environment variables or backend are currently needed. The GitHub footer text reserves space for a real repository link without inventing a URL. No remote repository or deployment is created in Phase 6.

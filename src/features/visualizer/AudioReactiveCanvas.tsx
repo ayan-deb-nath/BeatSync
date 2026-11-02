@@ -12,10 +12,13 @@ interface Props {
   measurementsRef: RefObject<AudioMeasurements>
   listening: boolean
   settings?: VisualizerSettings
+  captureRef?: RefObject<HTMLCanvasElement | null>
+  captureRedrawRef?: RefObject<(() => void) | null>
 }
 
-export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEFAULT_SETTINGS }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEFAULT_SETTINGS, captureRef, captureRedrawRef }: Props) {
+  const internalCanvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasRef = captureRef ?? internalCanvasRef
   const listeningRef = useRef(listening)
   const simulationRef = useRef<VisualizerSimulation | null>(null)
   const [unavailable, setUnavailable] = useState(false)
@@ -52,6 +55,8 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
       renderer.draw(simulation, motion.matches)
     }
     redrawRef.current = redraw
+    // Repaint identical pixels for capture, without advancing reduced-motion artwork.
+    if (captureRedrawRef) captureRedrawRef.current = () => { if (motion.matches) redraw() }
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
@@ -108,8 +113,9 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
       simulation.clear()
       simulationRef.current = null
       redrawRef.current = null
+      if (captureRedrawRef) captureRedrawRef.current = null
     }
-  }, [measurementsRef])
+  }, [measurementsRef, canvasRef, captureRedrawRef])
 
   return (
     <div className="orbit-scene canvas-scene">
@@ -117,8 +123,6 @@ export function AudioReactiveCanvas({ measurementsRef, listening, settings = DEF
         Neon audio visualizer. Live measurements are also available in the audio meters below.
       </canvas>
       {unavailable && <p className="canvas-fallback">Canvas is unavailable in this browser. Microphone controls and live audio meters are still available.</p>}
-      <span className="scene-coordinate coordinate-left" aria-hidden="true">BS / NF—01</span>
-      <span className="scene-coordinate coordinate-right" aria-hidden="true">{listening ? 'LIVE AUDIO' : 'IDLE STAGE'}</span>
     </div>
   )
 }

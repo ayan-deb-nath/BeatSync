@@ -20,6 +20,8 @@ export function useMicrophoneAudio() {
     measurementsRef: session.measurementsRef,
     subscribeLevels: session.subscribeLevels,
     getLevels: session.getLevels,
+    cloneRecordingTrack: session.cloneRecordingTrack,
+    subscribeCaptureEnd: session.subscribeCaptureEnd,
   }
 }
 

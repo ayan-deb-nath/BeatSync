@@ -16,6 +16,7 @@ class TestTrack extends EventTarget {
   muted = false
   stops = 0
   stop() { this.readyState = 'ended'; this.stops++ }
+  clone() { return new TestTrack() }
 }
 
 function stream() {
@@ -161,6 +162,26 @@ test('construction is inert; rapid starts share one request and one context', as
   assert.ok(context.closed && context.sourceDisconnected && context.analyser.disconnected)
   assert.equal(frames.size, 0)
   assert.equal(audio.getState().status, 'inactive')
+})
+
+test('recording clone ownership is isolated and capture-end subscribers run on microphone stop', async () => {
+  const audio = new MicrophoneSession()
+  assert.equal(audio.cloneRecordingTrack(), null)
+  const capture = stream()
+  const starting = audio.start()
+  request.resolve(capture.value)
+  await starting
+  const clone = audio.cloneRecordingTrack()!
+  assert.notEqual(clone, capture.track)
+  clone.stop()
+  assert.equal(capture.track.readyState, 'live')
+  let notified = false
+  const unsubscribe = audio.subscribeCaptureEnd(() => { notified = true })
+  audio.stop()
+  assert.equal(notified, true)
+  assert.equal(audio.cloneRecordingTrack(), null)
+  unsubscribe()
+  await flush()
 })
 
 test('sampling updates ref each frame, throttles snapshots, and resets immediately on stop', async () => {

@@ -165,6 +165,15 @@ export class CanvasRenderer {
       }
     }
     ctx.restore()
+    // Recorded video contains Canvas pixels only, so branding is drawn here too.
+    ctx.save()
+    ctx.font = '10px "Segoe UI", sans-serif'
+    ctx.fillStyle = this.theme.symbol
+    ctx.globalAlpha = 0.55
+    ctx.fillText('BEATSYNC', 20, this.height - 18)
+    ctx.textAlign = 'right'
+    ctx.fillText(this.theme.name.toUpperCase(), this.width - 20, this.height - 18)
+    ctx.restore()
   }
 
   private circle(radius: number) {

@@ -5,6 +5,8 @@ import type { FullscreenControls } from './fullscreen/useFullscreen'
 import { SENSITIVITY } from './settings/preferences'
 import type { VisualizerSettings } from './settings/preferences'
 import { isThemeId, THEMES } from './settings/themes'
+import type { PerformanceRecording } from '../recording/usePerformanceRecording'
+import { RecordingAction } from '../recording/RecordingControls'
 
 interface Props {
   audio: MicrophoneControls
@@ -13,9 +15,10 @@ interface Props {
   fullscreen: FullscreenControls
   fullscreenButtonRef: RefObject<HTMLButtonElement | null>
   storageUnavailable: boolean
+  recording: PerformanceRecording
 }
 
-export function VisualizerControls({ audio, settings, updateSettings, fullscreen, fullscreenButtonRef, storageUnavailable }: Props) {
+export function VisualizerControls({ audio, settings, updateSettings, fullscreen, fullscreenButtonRef, storageUnavailable, recording }: Props) {
   const canStop = audio.state.status === 'listening' || audio.state.status === 'requesting'
   const startDisabled = canStop || audio.state.permissionPending || audio.state.releasing
 
@@ -23,7 +26,7 @@ export function VisualizerControls({ audio, settings, updateSettings, fullscreen
     <div className="control-panel">
       <div className="control-panel-heading">
         <h3>Make it your own</h3>
-        <p>Recording coming soon</p>
+        <p>Local performance studio</p>
       </div>
       <fieldset className="controls" aria-describedby="audio-privacy">
         <legend className="sr-only">Microphone and visualizer controls</legend>
@@ -70,15 +73,15 @@ export function VisualizerControls({ audio, settings, updateSettings, fullscreen
         </div>
         <div className="control-item">
           <span className="control-label"><Icon name="record" /> Capture</span>
-          <button type="button" className="utility-button" disabled><span className="record-dot" /> Record</button>
-          <span className="control-detail">Coming soon</span>
+          <RecordingAction recording={recording} />
+          <span className="control-detail">{!recording.state.supported ? 'Unavailable in this browser' : recording.state.result ? 'Video ready below' : 'Canvas + microphone · 2 min max'}</span>
         </div>
       </fieldset>
       {(!fullscreen.supported || fullscreen.error) && <p id="fullscreen-feedback" className="fullscreen-feedback" role={fullscreen.error ? 'alert' : undefined}>
         {fullscreen.error ?? 'Fullscreen is unavailable in this browser or embedded page. You can still use the visualizer here.'}
       </p>}
       {storageUnavailable && <p className="control-detail" role="status">Browser storage is unavailable. Your preferences will last for this session.</p>}
-      <p id="audio-privacy" className="audio-privacy">Your microphone audio is processed locally in your browser. Nothing is uploaded or recorded.</p>
+      <p id="audio-privacy" className="audio-privacy">Your microphone audio is processed locally. Recording starts only when you press Start Recording. Nothing is uploaded.</p>
     </div>
   )
 }

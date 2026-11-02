@@ -42,6 +42,19 @@ export class MicrophoneSession {
   private closing: Promise<void> | null = null
   private stateListeners = new Set<() => void>()
   private levelListeners = new Set<() => void>()
+  private captureEndListeners = new Set<() => void>()
+
+  /** The caller owns this clone. No additional permission request or audio graph. */
+  cloneRecordingTrack = (): MediaStreamTrack | null => {
+    if (this.state.status !== 'listening') return null
+    const track = this.resources?.stream?.getAudioTracks().find(track => track.readyState === 'live')
+    return track ? track.clone() : null
+  }
+
+  subscribeCaptureEnd = (listener: () => void) => {
+    this.captureEndListeners.add(listener)
+    return () => { this.captureEndListeners.delete(listener) }
+  }
 
   getState = () => this.state
   getLevels = () => this.levels
@@ -71,6 +84,7 @@ export class MicrophoneSession {
     const session = this.resources
     this.resources = null // Invalidates every pending continuation before teardown.
     if (session) {
+      this.captureEndListeners.forEach(listener => listener())
       if (session.frame !== null) cancelAnimationFrame(session.frame)
       session.removeListeners.forEach(remove => remove())
       session.stream?.getTracks().forEach(track => track.stop())
