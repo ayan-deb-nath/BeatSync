@@ -9,7 +9,7 @@ export function SiteHeader() {
         <a href="#how-it-works">How It Works</a>
         <a href="#about">About</a>
       </nav>
-      <span className="release-badge"><span className="status-dot" /> PREVIEW EDITION</span>
+      <span className="release-badge"><span className="status-dot" /> PUBLIC RELEASE</span>
     </header>
   )
 }

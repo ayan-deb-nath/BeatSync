@@ -6,7 +6,7 @@ BeatSync turns live microphone input into audio-reactive neon rings, shockwaves,
 
 The project combines a personal interest in beatboxing with software development and interactive audio visualization. Its aim is to make the energy of a freestyle visible using browser audio analysis and frequency heuristics.
 
-Live demo: **not published yet**. Repository link: **not added yet**. No deployment or remote repository was created during this readiness phase.
+**[Live demo](https://beat-sync-flame.vercel.app/)** · **[GitHub repository](https://github.com/ayan-deb-nath/BeatSync)**
 
 ## Features
 
@@ -170,7 +170,7 @@ Features are capability-detected. Missing fullscreen/recording support disables 
 
 Chrome synthetic microphone and mobile-sized viewport checks do not verify physical microphones, a native permission dialog, Safari, Firefox, or real mobile devices. Audio/video synchronization, save dialogs, codec playback in other players, low-memory behavior, and sustained hardware performance still require manual testing. Important recordings must be downloaded before leaving.
 
-## Production build and Vercel readiness
+## Production build and deployment
 
 ```sh
 npm ci
@@ -183,18 +183,16 @@ npm run preview
 
 The output is static content under **`dist/`**. No backend services, secrets, or portable runtime are required. Application code contains no absolute Windows paths or hardcoded development service URLs.
 
-For a future Vercel deployment, select the **Vite** framework preset, **Node.js 24.x**, install with **`npm ci`**, build with **`npm run build`**, and publish **`dist`**. `package.json` pins the Node major to `24.x`, supported by [Vercel's Node 24 runtime/build configuration](https://vercel.com/changelog/node-js-24-lts-is-now-generally-available-for-builds-and-functions). Serve the public application over HTTPS for microphone access. This is a single-page anchor-based application; no client-side route rewrite is needed.
+BeatSync is deployed on Vercel at **[beat-sync-flame.vercel.app](https://beat-sync-flame.vercel.app/)**, with source available on **[GitHub](https://github.com/ayan-deb-nath/BeatSync)**. For Vercel deployments, select the **Vite** framework preset, **Node.js 24.x**, install with **`npm ci`**, build with **`npm run build`**, and publish **`dist`**. `package.json` pins the Node major to `24.x`, supported by [Vercel's Node 24 runtime/build configuration](https://vercel.com/changelog/node-js-24-lts-is-now-generally-available-for-builds-and-functions). The public application uses HTTPS for microphone access. This is a single-page anchor-based application; no client-side route rewrite is needed.
 
-The document includes a favicon, language, viewport, theme color, title, description, and Open Graph/social text. A production URL, canonical URL, repository URL, and social preview image have deliberately not been invented. Add verified URLs and a real share image after those resources exist. No public screenshot or demo video is supplied yet.
-
-**Deployment has not been performed. Changes have not been pushed to GitHub.**
+The document includes a favicon, language, viewport, theme color, title, description, and Open Graph/social text. Canonical and Open Graph URL metadata use the production address, `https://beat-sync-flame.vercel.app/`. A dedicated social preview image is not available yet, so no image metadata references a nonexistent asset. No public screenshot or demo video is supplied yet.
 
 ## Future improvements
 
 - Tune onset heuristics using consented physical-device testing across microphones and rooms.
 - Broaden Safari, Firefox, and mobile recording/playback validation.
 - Measure frame time, memory, and audio/video synchronization on representative hardware.
-- Add verified demo/repository links and a social preview image when available.
+- Add a dedicated social preview image when available.
 - Evaluate accessible transcript/caption workflows for shared performances.
 
 These are future work, not claims of implemented functionality.

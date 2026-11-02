@@ -57,7 +57,7 @@ export function App() {
         </section>
       </main>
       <footer className="site-footer page-width">
-        <div className="footer-top"><Brand /><p>Built with React and TypeScript</p><span className="github-placeholder">GitHub <span>Link coming soon ↗</span></span></div>
+        <div className="footer-top"><Brand /><p>Built with React and TypeScript</p><a className="github-placeholder" href="https://github.com/ayan-deb-nath/BeatSync">GitHub <span>View source ↗</span></a></div>
         <div className="footer-bottom"><p>© 2026 BeatSync. All rights reserved.</p><span>MADE FOR YOUR RHYTHM.</span></div>
       </footer>
     </div>
