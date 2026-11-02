@@ -1,0 +1,150 @@
+.start-button:enabled,
+.mic-buttons button:enabled {
+  cursor: pointer;
+  transition: filter .2s, border-color .2s;
+}
+
+.start-button:enabled:hover,
+.mic-buttons button:enabled:hover {
+  filter: brightness(1.12);
+  border-color: #b8b0e0;
+}
+
+.mic-buttons button:disabled {
+  opacity: .55;
+}
+
+.microphone-status-listening .status-dot {
+  background: var(--color-accent);
+  box-shadow: 0 0 8px #00e5ff55;
+}
+
+.microphone-status-error .status-dot {
+  background: #ff96c9;
+}
+
+.microphone-error,
+.microphone-hint {
+  max-width: 680px;
+  margin: -10px auto 0;
+  padding: 0 22px 24px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #ffc0df;
+}
+
+.microphone-hint {
+  color: #b8b2cc;
+}
+
+.audio-privacy {
+  font-size: 11px;
+  color: #aaa4bd;
+  line-height: 1.8;
+  margin-top: 22px;
+}
+
+.audio-levels {
+  padding: 24px 28px;
+  border-top: 1px solid var(--line);
+  background: linear-gradient(110deg, #101220, #11101c);
+}
+
+.audio-levels-heading {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.audio-levels-heading h3 {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.audio-levels-heading p {
+  font-size: 10px;
+  color: #aaa1bc;
+}
+
+.audio-meter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.audio-meter-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: #d0cbe1;
+  margin-bottom: 10px;
+}
+
+.audio-meter-label > span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: #b3dfe7;
+}
+
+.audio-meter meter {
+  display: block;
+  width: 100%;
+  height: 9px;
+  border: 0;
+  border-radius: 8px;
+  background: #252133;
+  appearance: none;
+  --meter-color: #00d4eb;
+}
+
+.audio-meter-low meter { --meter-color: #a885fa; }
+.audio-meter-mid meter { --meter-color: #eb79b7; }
+.audio-meter-high meter { --meter-color: #86b5ff; }
+
+.audio-meter meter::-webkit-meter-bar {
+  background: #252133;
+  border: 0;
+  border-radius: 8px;
+}
+
+.audio-meter meter::-webkit-meter-optimum-value {
+  background: var(--meter-color);
+  border-radius: 8px;
+  transition: width .1s linear;
+}
+
+.audio-meter meter::-moz-meter-bar {
+  background: var(--meter-color);
+  border-radius: 8px;
+  transition: width .1s linear;
+}
+
+.audio-meter-band {
+  display: block;
+  color: #a49bb7;
+  font-size: 9px;
+  margin-top: 9px;
+}
+
+@media (max-width: 1000px) {
+  .audio-meter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .audio-levels { padding: 22px 16px; }
+  .audio-meter-grid { gap: 22px 18px; }
+  .audio-meter-label { flex-wrap: wrap; }
+  .audio-levels-heading p, .audio-privacy { font-size: 10px; }
+  .microphone-error, .microphone-hint { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audio-meter meter::-webkit-meter-optimum-value,
+  .audio-meter meter::-moz-meter-bar {
+    transition: none;
+  }
+}

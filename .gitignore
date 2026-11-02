@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.tools/
+*.tsbuildinfo
+*.local
+.env
+.env.*
+!.env.example
+.vercel/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/*
+!.vscode/extensions.json

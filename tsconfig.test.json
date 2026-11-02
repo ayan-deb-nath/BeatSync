@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "types": ["node"]
+  },
+  "include": ["tests/**/*.test.ts", "src/features/audio/analysis.ts", "src/features/audio/MicrophoneSession.ts", "src/features/audio/types.ts"]
+}
